@@ -1,4 +1,6 @@
 FROM gcr.io/datamechanics/spark:platform-3.2.1-latest
+MAINTAINER asi@dbca.wa.gov.au
+LABEL org.opencontainers.image.source https://github.com/dbca-wa/pyspark-docker
 
 WORKDIR /opt/application/
 
