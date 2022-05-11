@@ -5,4 +5,4 @@ WORKDIR /opt/application/
 ENV PYSPARK_MAJOR_PYTHON_VERSION=3
 RUN pip3 install azure-storage-blob==12.11.0 azure-identity==1.10.0
 
-COPY oracle_financials_logins.py .
+COPY log4j4py.py oracle_financials_logins.py ./
