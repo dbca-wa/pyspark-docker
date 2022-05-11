@@ -3,7 +3,9 @@
 Example run command:
 
 ```
-docker container run --env STORAGE_ACCOUNT_NAME="storage_acct_name" --env STORAGE_ACCOUNT_KEY="foobar" --env SMTP_SERVER="smtp.server" --env SMTP_PASSWORD="smtppass" pyspark-test driver local:///opt/application/oracle_financials_logins.py --hours 12
+docker container run --env STORAGE_ACCOUNT_NAME=storage_acct_name --env STORAGE_ACCOUNT_KEY=foobar \
+--env SMTP_SERVER=smtp.server --env EMAIL_REPORT_SENDER=sender@email.com --env EMAIL_REPORT_RECIPIENTS=abe@email.com,bob@email.com \
+pyspark-test driver local:///opt/application/oracle_financials_logins.py --hours 24
 ```
 
 References:
