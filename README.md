@@ -7,7 +7,16 @@ access key are required for use.
 References:
 
 * https://spot.io/blog/optimized-spark-docker-images-are-now-available/
+* https://spot.io/blog/tutorial-running-pyspark-inside-docker-containers/
 * https://docs.datamechanics.co/docs/docker-images
+
+# PySpark shell session
+
+Run the following command to get a Python shell session in a container:
+
+```
+docker container run -it ghcr.io/dbca-wa/pyspark-docker /opt/spark/bin/pyspark
+```
 
 # HTTP requests for a single host
 
