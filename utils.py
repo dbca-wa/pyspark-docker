@@ -44,9 +44,12 @@ def spark_session(storage_account_name, storage_account_key):
     return session
 
 
-def read_nginx_logs(hours_ago, session, storage_account_name, blob_container="access-logs"):
+def read_nginx_logs(hours_ago, session, storage_account_name, blob_container="access-logs", hours_offset=None):
     """Read Nginx logs from blob storage for a given number of hours into the past
     and parse them into a Spark session, returning a DataFrame.
+    `hours_offset` is an optional integer which offsets backwards from the current time, in order to account
+    for any expected delays in log shipping. Where this value is ommitted, the starting time is set at the
+    beginning of the current date (i.e. 0:00:00 of the current date).
     """
     schema = StructType(fields=[
         StructField("timestamp", StringType(), True),
@@ -65,7 +68,10 @@ def read_nginx_logs(hours_ago, session, storage_account_name, blob_container="ac
 
     filename = 'wasbs://{}@{}.blob.core.windows.net/{}.nginx.access.csv'
     file_list = []
-    t = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)  # Start at the beginning of the current date.
+    if not hours_offset:
+        t = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)  # Start at the beginning of the current date.
+    else:
+        t = datetime.now() - timedelta(hours=hours_offset)  # Start the set amount of hours ago.
 
     for i in range(hours_ago):
         csv_path = filename.format(blob_container, storage_account_name, t.strftime("%Y%m%d%H"))
