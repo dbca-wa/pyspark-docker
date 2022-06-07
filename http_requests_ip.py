@@ -1,0 +1,66 @@
+import argparse
+import csv
+import logging
+import os
+import sys
+
+from utils import Log4JProxyHandler, spark_session, read_nginx_logs
+
+
+STORAGE_ACCOUNT_NAME = os.environ['STORAGE_ACCOUNT_NAME']
+STORAGE_ACCOUNT_KEY = os.environ['STORAGE_ACCOUNT_KEY']
+
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+LOGGER = logging.getLogger("HttpRequestsSingleIp")
+
+
+def exclude_requests(df):
+    # Exclude requests from Nessus
+    df = df.filter(df.remote_ip != "10.6.20.97")
+    # Exclude requests from PRTG
+    df = df.filter(df.user_agent != "Mozilla/5.0 (compatible; PRTG Network Monitor (www.paessler.com); Windows)")
+    return df
+
+
+def filter_requests(df, ip):
+    """Apply filters to the DataFrame to only include requests to the IP address of interest.
+    """
+    df = df.filter(df.remote_ip == ip)
+    df.show()
+    return df
+
+
+def write_report(df, filename):
+    """For the passed-in DataFrame, write out the contents to a CSV.
+    """
+    df = df.coalesce(1).orderBy("timestamp")
+    temp_file = open(f"/out/{filename}", "w+")
+    fieldnames = df.columns
+    writer = csv.DictWriter(temp_file, fieldnames)
+    writer.writerow(dict(zip(fieldnames, fieldnames)))
+
+    for row in df.toLocalIterator():
+        writer.writerow(row.asDict())
+
+
+if __name__ == "__main__":
+    all_args = argparse.ArgumentParser()
+    all_args.add_argument("--hours", action="store", type=int, required=True, help="Number of hours into the past to load Nginx logs")
+    all_args.add_argument("--ip", action="store", type=str, required=True, help="IP address to filter HTTP requests for")
+    all_args.add_argument("--filename", action="store", type=str, required=True, help="Filename for the CSV report output")
+    args = vars(all_args.parse_args())
+    hours_ago = int(args["hours"])
+    ip = str(args["ip"])
+    filename = str(args["filename"])
+    session = spark_session(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
+    pyspark_handler = Log4JProxyHandler(session)
+    LOGGER.addHandler(pyspark_handler)
+    LOGGER.info("Starting report generation")
+    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, hours_offset=2)  # Start 2 hours in the past, to account for delay in log processing.
+    df = exclude_requests(df)
+    df = filter_requests(df, ip)
+    write_report(df, filename)
