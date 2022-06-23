@@ -1,3 +1,4 @@
+from azure.storage.blob import ContainerClient
 from datetime import datetime, timedelta
 import logging
 from logging import Handler, LogRecord
@@ -44,7 +45,7 @@ def spark_session(storage_account_name, storage_account_key):
     return session
 
 
-def read_nginx_logs(hours_ago, session, storage_account_name, blob_container="access-logs", hours_offset=None):
+def read_nginx_logs(hours_ago, session, storage_account_name, storage_account_key, blob_container="access-logs", hours_offset=None):
     """Read Nginx logs from blob storage for a given number of hours into the past
     and parse them into a Spark session, returning a DataFrame.
     `hours_offset` is an optional integer which offsets backwards from the current time, in order to account
@@ -66,16 +67,26 @@ def read_nginx_logs(hours_ago, session, storage_account_name, blob_container="ac
         StructField("email", StringType(), True),
     ])
 
-    filename = 'wasbs://{}@{}.blob.core.windows.net/{}.nginx.access.csv'
+    filepath = 'wasbs://{}@{}.blob.core.windows.net/{}'
     file_list = []
     if not hours_offset:
         t = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)  # Start at the beginning of the current date.
     else:
         t = datetime.now() - timedelta(hours=hours_offset)  # Start the set amount of hours ago.
 
+    container_client = ContainerClient(
+        account_url=f"https://{storage_account_name}.blob.core.windows.net",
+        container_name=blob_container,
+        credential=storage_account_key,
+    )
     for i in range(hours_ago):
-        csv_path = filename.format(blob_container, storage_account_name, t.strftime("%Y%m%d%H"))
-        file_list.append(csv_path)
+        filename = f"{t.strftime('%Y%m%d%H')}.nginx.access.csv"
+        # First, confirm that the CSV actually exists in blob storage before adding it to the list.
+        blob = container_client.get_blob_client(filename)
+        if blob.exists():
+            # Add the CSV to the list.
+            csv_blob_path = filepath.format(blob_container, storage_account_name, filename)
+            file_list.append(csv_blob_path)
         t = t - timedelta(hours=1)
 
     df = session.read.options(mode="DROPMALFORMED").load(file_list, format='csv', schema=schema)

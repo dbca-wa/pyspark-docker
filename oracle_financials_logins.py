@@ -99,7 +99,7 @@ if __name__ == "__main__":
     pyspark_handler = Log4JProxyHandler(session)
     LOGGER.addHandler(pyspark_handler)
     LOGGER.info("Starting report generation")
-    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME)
+    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
     df = oracle_financials_logs(df)
     blob_name = upload_report_blob(df, hours_ago, date.today())
     send_email_report(blob_name)
