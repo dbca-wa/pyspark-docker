@@ -60,7 +60,7 @@ if __name__ == "__main__":
     pyspark_handler = Log4JProxyHandler(session)
     LOGGER.addHandler(pyspark_handler)
     LOGGER.info("Starting report generation")
-    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
+    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY, hours_offset=2)
     df = exclude_requests(df)
     df = filter_requests(df, host)
     write_report(df, filename)
