@@ -28,8 +28,14 @@ To run the script locally, create a directory called `output`, run `chmod -R 777
 output` to allow write access to it, then adapt the following command:
 
 ```
-docker container run -v `pwd`/output:/out --env STORAGE_ACCOUNT_NAME="storage_acct_name" --env STORAGE_ACCOUNT_KEY="foobar" ghcr.io/dbca-wa/pyspark-docker driver local:///opt/application/http_requests_single_host.py --hours 24 --host=prs.dbca.wa.gov.au --filename=prs_requests.csv
+docker container run -v `pwd`/output:/out --env TZ=Australia/Perth \
+--env STORAGE_ACCOUNT_NAME="storage_acct_name" --env STORAGE_ACCOUNT_KEY="foobar" \
+ghcr.io/dbca-wa/pyspark-docker driver local:///opt/application/http_requests_single_host.py \
+--hours 24 --host=prs.dbca.wa.gov.au --filename=prs_requests.csv
 ```
+
+**NOTE**: the container will run as UTC timezone unless the local timezone is
+passed in via the `TZ` environment variable.
 
 # Oracle Financials login requests
 
