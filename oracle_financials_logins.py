@@ -93,13 +93,23 @@ def send_email_report(blob, container="analytics"):
 if __name__ == "__main__":
     all_args = argparse.ArgumentParser()
     all_args.add_argument("--hours", action="store", type=int, required=True, help="Number of hours into the past to load Nginx logs")
+    all_args.add_argument("--startdate", action="store", type=str, required=False, help="Date to start from, format YYYY-mm-dd (default is the current date)")
     args = vars(all_args.parse_args())
     hours_ago = int(args["hours"])
+    if "startdate" in args and args["startdate"]:
+        start_date = datetime.strptime(args["startdate"], "%Y-%m-%d")
+        now = datetime.now()
+        delta = now - start_date
+        hours_offset = delta.days * 24 + int(delta.seconds / 3600)
+        start_date = start_date.date()
+    else:
+        start_date = date.today()
+        hours_offset = None
     session = spark_session(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
     pyspark_handler = Log4JProxyHandler(session)
     LOGGER.addHandler(pyspark_handler)
     LOGGER.info("Starting report generation")
-    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
+    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY, hours_offset=hours_offset)
     df = oracle_financials_logs(df)
-    blob_name = upload_report_blob(df, hours_ago, date.today())
+    blob_name = upload_report_blob(df, hours_ago, start_date)
     send_email_report(blob_name)
