@@ -1,4 +1,5 @@
 from azure.storage.blob import ContainerClient
+from csv import DictWriter
 from datetime import datetime, timedelta
 import logging
 from logging import Handler, LogRecord
@@ -95,3 +96,16 @@ def read_nginx_logs(hours_ago, session, storage_account_name, storage_account_ke
     df = df.withColumn("timestamp", df.timestamp.cast(TimestampType()))
 
     return df
+
+
+def write_report(df, filename):
+    """For the passed-in DataFrame, write out the contents to a CSV.
+    """
+    df = df.coalesce(1)
+    temp_file = open(f"/out/{filename}", "w+")
+    fieldnames = df.columns
+    writer = DictWriter(temp_file, fieldnames)
+    writer.writerow(dict(zip(fieldnames, fieldnames)))
+
+    for row in df.toLocalIterator():
+        writer.writerow(row.asDict())
