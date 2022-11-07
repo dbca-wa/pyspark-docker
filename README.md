@@ -9,13 +9,31 @@ References:
 * https://spot.io/blog/optimized-spark-docker-images-are-now-available/
 * https://spot.io/blog/tutorial-running-pyspark-inside-docker-containers/
 * https://docs.datamechanics.co/docs/docker-images
+* https://github.com/datamechanics/examples
 
 # PySpark shell session
 
-Run the following command to get a Python shell session in a container:
+Run the following command to get an interactive PySpark session in a running container:
 
 ```
 docker container run -it ghcr.io/dbca-wa/pyspark-docker /opt/spark/bin/pyspark
+```
+
+# Running a PySpark script in an interactive shell session
+
+Start an interactive shell session like so (mounts the local `output` directory,
+and sets a couple of environment variables):
+
+```
+docker container run -it -v `pwd`/output:/out \
+--env STORAGE_ACCOUNT_NAME="foo" --env STORAGE_ACCOUNT_KEY="storage_key" \
+ghcr.io/dbca-wa/pyspark-docker /bin/bash
+```
+
+Within that shell session, submit a script to the PySpark interpreter:
+
+```
+/opt/spark/bin/spark-submit http_requests_domain_daily_counts.py --days-ago 1 --filename requests.csv
 ```
 
 # HTTP requests for a single host
@@ -48,7 +66,8 @@ Example Docker run command:
 
 ```
 docker container run --env STORAGE_ACCOUNT_NAME=storage_acct_name --env STORAGE_ACCOUNT_KEY=foobar \
---env SMTP_SERVER=smtp.server --env EMAIL_REPORT_SENDER=sender@email.com --env EMAIL_REPORT_RECIPIENTS=abe@email.com,bob@email.com \
+--env SMTP_SERVER=smtp.server --env EMAIL_REPORT_SENDER=sender@email.com \
+--env EMAIL_REPORT_RECIPIENTS=abe@email.com,bob@email.com \
 ghcr.io/dbca-wa/pyspark-docker driver local:///opt/application/oracle_financials_logins.py --hours 24
 ```
 
