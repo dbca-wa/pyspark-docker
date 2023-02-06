@@ -9,5 +9,9 @@ RUN wget -q -O /tmp/postgresql-42.5.0.jar https://jdbc.postgresql.org/download/p
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-
 COPY *.py ./
+
+USER root
+RUN useradd -ms /bin/bash sparkuser \
+  && chown -R sparkuser:sparkuser /home/sparkuser
+USER sparkuser
