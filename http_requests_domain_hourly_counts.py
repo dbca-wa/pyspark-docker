@@ -18,6 +18,8 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 LOGGER = logging.getLogger("HttpRequestsSingleIp")
+azure_logger = logging.getLogger("azure")
+azure_logger.setLevel(logging.ERROR)
 
 
 def exclude_requests(df):

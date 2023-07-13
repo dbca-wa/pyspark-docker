@@ -23,6 +23,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 LOGGER = logging.getLogger("OracleFinancialsLogins")
+azure_logger = logging.getLogger("azure")
 
 
 def oracle_financials_logs(df):

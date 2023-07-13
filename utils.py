@@ -80,7 +80,8 @@ def read_nginx_logs(hours_ago, session, storage_account_name, storage_account_ke
         container_name=blob_container,
         credential=storage_account_key,
     )
-    for i in range(hours_ago):
+    # NOTE: we specify 1 hour "past" the number of hours, because that's where we cease.
+    for i in range(hours_ago + 1):
         filename = f"{t.strftime('%Y%m%d%H')}.nginx.access.csv"
         # First, confirm that the CSV actually exists in blob storage before adding it to the list.
         blob = container_client.get_blob_client(filename)

@@ -16,6 +16,10 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 LOGGER = logging.getLogger("HttpRequestsSingleHost")
+# Set the logging level for all azure-* libraries (the azure-storage-blob library uses this one).
+# Reference: https://learn.microsoft.com/en-us/azure/developer/python/sdk/azure-sdk-logging
+azure_logger = logging.getLogger("azure")
+azure_logger.setLevel(logging.ERROR)
 
 
 def exclude_requests(df):
@@ -49,18 +53,23 @@ def write_report(df, filename):
 if __name__ == "__main__":
     all_args = argparse.ArgumentParser()
     all_args.add_argument("--hours", action="store", type=int, required=True, help="Number of hours into the past to load Nginx logs")
+    all_args.add_argument("--hours_offset", action="store", type=int, required=False, help="Offset backwards this many hours to start reading Nginx logs")
     all_args.add_argument("--host", action="store", type=str, required=True, help="Hostname to filter HTTP request for")
     all_args.add_argument("--filename", action="store", type=str, required=True, help="Filename for the CSV report output")
     args = vars(all_args.parse_args())
     hours_ago = int(args["hours"])
     host = str(args["host"])
     filename = str(args["filename"])
+    if "hours_offset" in args and int(args["hours_offset"]) > 1:
+        hours_offset = int(args["hours_offset"])
+    else:
+        hours_offset = 1
     session = spark_session(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
     session.sparkContext.setLogLevel("INFO")  # ALL,DEBUG,ERROR,FATAL,TRACE,WARN,INFO,OFF
     pyspark_handler = Log4JProxyHandler(session)
     LOGGER.addHandler(pyspark_handler)
     LOGGER.info("Starting report generation")
-    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY, hours_offset=2)
+    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY, hours_offset=hours_offset)
     df = exclude_requests(df)
     df = filter_requests(df, host)
     write_report(df, filename)
