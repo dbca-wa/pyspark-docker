@@ -60,7 +60,7 @@ if __name__ == "__main__":
     hours_ago = int(args["hours"])
     host = str(args["host"])
     filename = str(args["filename"])
-    if "hours_offset" in args and int(args["hours_offset"]) > 1:
+    if "hours_offset" in args and args["hours_offset"]:
         hours_offset = int(args["hours_offset"])
     else:
         hours_offset = 1

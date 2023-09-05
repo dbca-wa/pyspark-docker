@@ -96,6 +96,8 @@ spec:
           containers:
           - args:
             - /opt/spark/bin/spark-submit
+            - --driver-memory
+            - 8g
             - --conf
             - spark.driver.bindAddress=
             - --deploy-mode
