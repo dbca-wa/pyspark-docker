@@ -38,8 +38,7 @@ Within that shell session, submit a script to the PySpark interpreter (this is
 how you can e.g. set the driver memory):
 
 ```
-/opt/spark/bin/spark-submit http_requests_domain_daily_counts.py --days-ago 1 --filename requests.csv
-/opt/spark/bin/spark-submit --driver-memory 8g http_requests_single_host.py --hours=72 --host=perthzoo.wa.gov.au --filename=perthzoo.csv
+/opt/spark/bin/spark-submit --driver-memory 8g http_requests_single_host.py --start=2024020100 --end=2024020123 --host=perthzoo.wa.gov.au --filename=perthzoo.csv
 ```
 
 See https://stackoverflow.com/a/27445044/14508
@@ -57,7 +56,7 @@ To run the script locally, create a directory called `output`, run `chown -R
 docker container run -v `pwd`/output:/out --env TZ=Australia/Perth \
 --env STORAGE_ACCOUNT_NAME="storage_acct_name" --env STORAGE_ACCOUNT_KEY="foobar" \
 ghcr.io/dbca-wa/pyspark-docker driver --driver-memory 4g local:///opt/application/http_requests_single_host.py \
---hours 24 --host=prs.dbca.wa.gov.au --filename=prs_requests.csv
+--start=2024020100 --end=2024020123 --host=prs.dbca.wa.gov.au --filename=prs_requests.csv
 ```
 
 **NOTE**: the container will run as UTC timezone unless the local timezone is
@@ -76,7 +75,7 @@ Example Docker run command:
 docker container run --env STORAGE_ACCOUNT_NAME=storage_acct_name --env STORAGE_ACCOUNT_KEY=foobar \
 --env SMTP_SERVER=smtp.server --env EMAIL_REPORT_SENDER=sender@email.com \
 --env EMAIL_REPORT_RECIPIENTS=abe@email.com,bob@email.com \
-ghcr.io/dbca-wa/pyspark-docker driver local:///opt/application/oracle_financials_logins.py --hours 24
+ghcr.io/dbca-wa/pyspark-docker driver local:///opt/application/oracle_financials_logins.py --start=2024020100 --end=2024020123
 ```
 
 Example Kubernetes CronJob YAML definition:

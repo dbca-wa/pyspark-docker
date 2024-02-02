@@ -51,23 +51,20 @@ def write_report(df, filename):
 
 if __name__ == "__main__":
     all_args = argparse.ArgumentParser()
-    all_args.add_argument("--hours", action="store", type=int, required=True, help="Number of hours into the past to load Nginx logs")
-    all_args.add_argument("--hours_offset", action="store", type=int, required=False, help="Offset backwards this many hours to start reading Nginx logs")
+    all_args.add_argument("--start", action="store", type=str, required=True, help="Starting (earliest) Nginx log timestamp, YYYYmmddHH")
+    all_args.add_argument("--end", action="store", type=str, required=True, help="Ending (latest, inclusive) Nginx log timestamp, YYYYmmddHH")
     all_args.add_argument("--ip", action="store", type=str, required=True, help="IP address to filter HTTP requests for")
     all_args.add_argument("--filename", action="store", type=str, required=True, help="Filename for the CSV report output")
     args = vars(all_args.parse_args())
-    hours_ago = int(args["hours"])
+    start_timestamp = args["start"]
+    end_timestamp = args["end"]
     ip = str(args["ip"])
     filename = str(args["filename"])
-    if "hours_offset" in args and int(args["hours_offset"]) > 1:
-        hours_offset = int(args["hours_offset"])
-    else:
-        hours_offset = 1
     session = spark_session(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
     pyspark_handler = Log4JProxyHandler(session)
     LOGGER.addHandler(pyspark_handler)
     LOGGER.info("Starting report generation")
-    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY, hours_offset=hours_offset)
+    df = read_nginx_logs(start_timestamp, end_timestamp, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
     df = exclude_requests(df)
     df = filter_requests(df, ip)
     write_report(df, filename)

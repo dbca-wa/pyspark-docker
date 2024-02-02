@@ -1,7 +1,7 @@
 from azure.storage.blob import ContainerClient, BlobSasPermissions, generate_blob_sas
 import argparse
 import csv
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from email.message import EmailMessage
 import logging
 import os
@@ -35,7 +35,7 @@ def oracle_financials_logs(df):
     return df
 
 
-def upload_report_blob(df, hours_ago, start_date, blob_container="analytics"):
+def upload_report_blob(df, start_timestamp, end_timestamp, blob_container="analytics"):
     """For the passed-in DataFrame, write out the contents to a CSV and upload to blob storage.
     """
     df = df.coalesce(1)
@@ -50,9 +50,7 @@ def upload_report_blob(df, hours_ago, start_date, blob_container="analytics"):
     temp_file.seek(0)
 
     # Write the output to CSV in a defined blob container.
-    day_count = int(hours_ago / 24)
-    ds = start_date.strftime("%Y-%m-%d")
-    blob_name = f"oracle_financials_logins/oracle_financials_logins_{day_count}_day_{ds}.csv"
+    blob_name = f"oracle_financials_logins/oracle_financials_logins_{start_timestamp}_{end_timestamp}.csv"
     container_client = ContainerClient(
         account_url=f"https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net",
         container_name=blob_container,
@@ -93,24 +91,16 @@ def send_email_report(blob, container="analytics"):
 
 if __name__ == "__main__":
     all_args = argparse.ArgumentParser()
-    all_args.add_argument("--hours", action="store", type=int, required=True, help="Number of hours into the past to load Nginx logs")
-    all_args.add_argument("--startdate", action="store", type=str, required=False, help="Date to start from, format YYYY-mm-dd (default is the current date)")
+    all_args.add_argument("--start", action="store", type=str, required=True, help="Starting (earliest) Nginx log timestamp, YYYYmmddHH")
+    all_args.add_argument("--end", action="store", type=str, required=True, help="Ending (latest, inclusive) Nginx log timestamp, YYYYmmddHH")
     args = vars(all_args.parse_args())
-    hours_ago = int(args["hours"])
-    if "startdate" in args and args["startdate"]:
-        start_date = datetime.strptime(args["startdate"], "%Y-%m-%d")
-        now = datetime.now()
-        delta = now - start_date
-        hours_offset = delta.days * 24 + int(delta.seconds / 3600)
-        start_date = start_date.date()
-    else:
-        start_date = date.today()
-        hours_offset = None
+    start_timestamp = args["start"]
+    end_timestamp = args["end"]
     session = spark_session(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
     pyspark_handler = Log4JProxyHandler(session)
     LOGGER.addHandler(pyspark_handler)
     LOGGER.info("Starting report generation")
-    df = read_nginx_logs(hours_ago, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY, hours_offset=hours_offset)
+    df = read_nginx_logs(start_timestamp, end_timestamp, session, STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
     df = oracle_financials_logs(df)
-    blob_name = upload_report_blob(df, hours_ago, start_date)
+    blob_name = upload_report_blob(df, start_timestamp, end_timestamp)
     send_email_report(blob_name)

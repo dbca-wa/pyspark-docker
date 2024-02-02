@@ -1,6 +1,6 @@
 from azure.storage.blob import ContainerClient
 from csv import DictWriter
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 from logging import Handler, LogRecord
 from pyspark.sql import SparkSession
@@ -43,15 +43,15 @@ def spark_session(storage_account_name, storage_account_key):
     session = SparkSession.builder.getOrCreate()
     session.conf.set(f"fs.azure.account.key.{storage_account_name}.blob.core.windows.net", storage_account_key)
     session.conf.set("network.timeout", 1200)
+    session.conf.set("spark.sql.session.timezone", "Australia/Perth")
     return session
 
 
-def read_nginx_logs(hours_ago, session, storage_account_name, storage_account_key, blob_container="access-logs", hours_offset=None):
+def read_nginx_logs(start_timestamp, end_timestamp, session, storage_account_name, storage_account_key, blob_container="access-logs"):
     """Read Nginx logs from blob storage for a given number of hours into the past
     and parse them into a Spark session, returning a DataFrame.
-    `hours_offset` is an optional integer which offsets backwards from the current time, in order to account
-    for any expected delays in log shipping. Where this value is ommitted, the starting time is set at the
-    beginning of the current date (i.e. 0:00:00 of the current date).
+    `start_timestamp` and `end_timestamp` are strings in the format YYYYmmddHH, which need to
+    be parseable by datetime.strptime.
     """
     schema = StructType(fields=[
         StructField("timestamp", StringType(), True),
@@ -68,30 +68,30 @@ def read_nginx_logs(hours_ago, session, storage_account_name, storage_account_ke
         StructField("email", StringType(), True),
     ])
 
-    filepath = 'wasbs://{}@{}.blob.core.windows.net/{}'
+    filepath = "wasbs://{}@{}.blob.core.windows.net/{}"
     file_list = []
-    if not hours_offset:
-        t = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)  # Start at the beginning of the current date.
-    else:
-        t = datetime.now() - timedelta(hours=hours_offset)  # Start the set amount of hours ago.
-
+    start = int(start_timestamp)
+    end = int(end_timestamp)
     container_client = ContainerClient(
         account_url=f"https://{storage_account_name}.blob.core.windows.net",
         container_name=blob_container,
         credential=storage_account_key,
     )
-    # NOTE: we specify 1 hour "past" the number of hours, because that's where we cease.
-    for i in range(hours_ago + 1):
-        filename = f"{t.strftime('%Y%m%d%H')}.nginx.access.csv"
-        # First, confirm that the CSV actually exists in blob storage before adding it to the list.
-        blob = container_client.get_blob_client(filename)
-        if blob.exists():
-            # Add the CSV to the list.
-            csv_blob_path = filepath.format(blob_container, storage_account_name, filename)
-            file_list.append(csv_blob_path)
-        t = t - timedelta(hours=1)
 
-    df = session.read.options(mode="DROPMALFORMED").load(file_list, format='csv', schema=schema)
+    for i in range(start, end + 1):
+        try:
+            datetime.strptime(str(i), "%Y%m%d%H")
+            filename = f"{i}.nginx.access.csv"
+            # First, confirm that the CSV actually exists in blob storage before adding it to the list.
+            blob = container_client.get_blob_client(filename)
+            if blob.exists():
+                # Add the CSV to the list.
+                csv_blob_path = filepath.format(blob_container, storage_account_name, filename)
+                file_list.append(csv_blob_path)
+        except:
+            pass
+
+    df = session.read.options(mode="DROPMALFORMED").load(file_list, format="csv", schema=schema)
     df = df.withColumn("timestamp", df.timestamp[0:19])  # Slice off the timezone string.
     # Re-cast the timestamp column type.
     df = df.withColumn("timestamp", df.timestamp.cast(TimestampType()))
