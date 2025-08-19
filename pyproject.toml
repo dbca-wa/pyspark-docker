@@ -1,18 +1,26 @@
-[tool.poetry]
+[project]
 name = "pyspark-docker"
-version = "0.1.2"
+version = "0.2.0"
 description = "PySpark in a Docker container"
-authors = ["Ashley Felton <ashley.felton@dbca.wa.gov.au>"]
+authors = [{ name = "Ashley Felton", email = "ashley.felton@dbca.wa.gov.au" }]
 license = "Apache 2.0"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-pyspark = "3.5.0"
-ipython = "^8.20.0"
-python-dotenv = "1.0.1"
-azure-storage-blob = "12.19.0"
-azure-identity = "1.15.0"
+readme = "README.md"
+requires-python = ">=3.13,<4"
+dependencies = [
+    "azure-identity==1.24.0",
+    "azure-storage-blob==12.26.0",
+    "ipython>=9.4.0",
+    "pyspark==3.5.6",
+    "python-dotenv==1.1.1",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.ruff]
+line-length = 140
+indent-width = 4
+
+[tool.ruff.lint]
+ignore = ["E265", "E501", "E722"]
